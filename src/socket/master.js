@@ -1,6 +1,6 @@
 import cluster from 'cluster';
 import net from 'net';
-import winston from 'winston';
+import winston from '../logger';
 
 const listeners = [];
 const workerPool = [];
@@ -22,10 +22,13 @@ export default function initialize(ioConfig) {
     }
 
     const numProcesses = ioConfig.getProcessCount();
-    winston.debug(`Spawning ${numProcesses} workers`);
+    winston.info(`Spawning ${numProcesses} workers`);
 
     for (let i = 0; i < numProcesses; i++) {
-        workerPool.push(cluster.fork('./worker'));
+        workerPool.push(cluster.fork({
+            WORKER_MODULE: './lib/socket/worker',
+            IO_CONFIG: JSON.stringify(ioConfig.config)
+        }));
     }
 
     ioConfig.getListenerConfig().forEach(listenerConfig => {
@@ -37,8 +40,8 @@ export default function initialize(ioConfig) {
                 const index = stickyHashAddress(connection.remoteAddress,
                         workerPool.length);
                 workerPool[index].send('connection', connection);
-                winston.info(`Sending connection from ${connection.remoteAddress} ` +
-                        `to worker-${index}`);
+                winston.debug(`Sending connection from ${connection.remoteAddress} ` +
+                        `to worker-${workerPool[index].id}`);
             } catch (err) {
                 winston.error(`Error in connection handler: ${err.message}`);
             }

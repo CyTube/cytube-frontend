@@ -1,8 +1,7 @@
 var cluster = require('cluster');
+var IOConfiguration = require('./lib/configuration/ioconfig')['default'];
 
 if (cluster.isMaster) {
-    var IOConfiguration = require('./lib/configuration/ioconfig')['default'];
-
     var ioConfig = new IOConfiguration({
         listeners: [
             {
@@ -15,5 +14,8 @@ if (cluster.isMaster) {
 
     require('./lib/socket/master')['default'](ioConfig);
 } else {
-
+    var workerModule = require(process.env.WORKER_MODULE);
+    workerModule['default'](
+            new IOConfiguration(
+                    JSON.parse(process.env.IO_CONFIG)));
 }
