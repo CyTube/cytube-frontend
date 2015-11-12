@@ -4,8 +4,9 @@ import winston from '../logger';
 import socketio from 'socket.io';
 import Socket from 'socket.io/lib/socket';
 import { EventEmitter } from 'events';
+import Publisher from '../redis/publisher';
 
-export default function initialize(ioConfig) {
+export default function initialize(ioConfig, redisClientFactory) {
     winston.info(`Initializing worker process`);
     patchSocketIOEventProxy();
 
@@ -24,11 +25,23 @@ export default function initialize(ioConfig) {
     }
 
     process.on('message', onMessage);
+
+    const publisher = new Publisher(redisClientFactory.create(), 'test', 'test');
     ioServer.on('connection', socket => {
         winston.info(`socket.io accepted connection from ${socket.conn.remoteAddress}`);
+        publisher.publish({
+            type: 'socketConnected',
+            socketID: socket.id
+        });
 
-        socket.on('proxied-event', event => {
+        socket.on('proxied-event', function (event) {
             winston.debug(`(socket-${socket.id}) Intercepted event ${event}`);
+            const args = Array.prototype.slice.call(arguments);
+            publisher.publish({
+                type: 'socketFrame',
+                socketID: socket.id,
+                args: args
+            });
         });
     });
 }
