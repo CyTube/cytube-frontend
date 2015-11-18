@@ -2,6 +2,7 @@ import cluster from 'cluster';
 import http from 'http';
 import winston from '../logger';
 import socketio from 'socket.io';
+import redisAdapter from 'socket.io-redis';
 import Socket from 'socket.io/lib/socket';
 import { EventEmitter } from 'events';
 import Publisher from '../redis/publisher';
@@ -13,6 +14,7 @@ export default function initialize(ioConfig, redisClientFactory) {
     const httpServer = http.createServer();
     const ioServer = socketio();
     ioServer.attach(httpServer);
+    ioServer.adapter(redisAdapter(redisClientFactory.create()));
 
     function onMessage(message, socket) {
         if (message !== 'connection') {
@@ -31,7 +33,8 @@ export default function initialize(ioConfig, redisClientFactory) {
         winston.info(`socket.io accepted connection from ${socket.conn.remoteAddress}`);
         publisher.publish({
             type: 'socketConnected',
-            socketID: socket.id
+            socketID: socket.id,
+            address: socket.conn.remoteAddress
         });
 
         socket.on('proxied-event', function (event) {
@@ -41,6 +44,13 @@ export default function initialize(ioConfig, redisClientFactory) {
                 type: 'socketFrame',
                 socketID: socket.id,
                 args: args
+            });
+        });
+
+        socket.on('disconnect', () => {
+            publisher.publish({
+                type: 'socketDisconnect',
+                socketID: socket.id
             });
         });
     });

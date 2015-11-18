@@ -21,10 +21,14 @@ Object.defineProperty(exports, 'default', {
 
 function initializeLogger() {
     INSTANCE = new winston.Logger({
-        level: 'debug',
+        level: 'info',
         transports: [
             new (winston.transports.Console)({
                 colorize: true
+            }),
+            new (winston.transports.File)({
+                filename: 'application.log',
+                json: false
             })
         ]
     });
