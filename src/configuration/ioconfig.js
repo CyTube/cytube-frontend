@@ -1,6 +1,6 @@
 export default class IOConfiguration {
     constructor(config) {
-        this.config = Object.freeze(config);
+        this.config = config;
     }
 
     getListenerConfig() {

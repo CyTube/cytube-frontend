@@ -1,5 +1,6 @@
 var cluster = require('cluster');
 var IOConfiguration = require('./lib/configuration/ioconfig')['default'];
+var WebConfiguration = require('./lib/configuration/webconfig')['default'];
 var RedisConfiguration = require('./lib/configuration/redisconfig')['default'];
 var RedisClientFactory = require('./lib/redis/redisclient-factory')['default'];
 
@@ -14,7 +15,15 @@ if (cluster.isMaster) {
         processCount: 4
     });
 
-    require('./lib/socket/master')['default'](ioConfig);
+    var webConfig = new WebConfiguration({
+        trustProxy: [
+            '127.0.0.1',
+            '::1'
+        ]
+    });
+
+    const Master = require('./lib/socket/master')['default'];
+    new Master(ioConfig, webConfig).initialize();
 } else {
     var redisConfig = new RedisConfiguration({
         host: 'localhost',

@@ -14,7 +14,7 @@ export default class Publisher {
 
         return this.redisClient.multi()
                 .rpush(this.queueName, data)
-                .publish(this.channelName, String(time))
+                .publish(this.channelName, time)
                 .execAsync();
     }
 }

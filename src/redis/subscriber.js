@@ -21,7 +21,7 @@ export default class Subscriber extends EventEmitter {
     }
 
     poll() {
-        this.readClient.multi()
+        this.dataClient.multi()
                 .lrange(this.queueName, 0, -1)
                 .del(this.queueName)
                 .execAsync()

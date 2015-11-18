@@ -17,11 +17,14 @@ export default function initialize(ioConfig, redisClientFactory) {
     ioServer.adapter(redisAdapter(redisClientFactory.create()));
 
     function onMessage(message, socket) {
-        if (message !== 'connection') {
+        if (typeof message !== 'object' || message.type !== 'connection') {
             return;
         }
 
-        winston.debug(`Received connection from ${socket.remoteAddress}`);
+        const initialData = new Buffer(message.initialData, 'base64');
+        socket.unshift(initialData);
+
+        winston.debug(`Received connection from ${message.realIP}`);
         httpServer.emit('connection', socket);
         socket.resume();
     }

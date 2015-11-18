@@ -14,6 +14,7 @@
     "babel-core": "^6.1.4",
     "babel-preset-es2015": "^6.1.4",
     "bluebird": "^3.0.5",
+    "ip": "^1.0.2",
     "redis": "^2.3.0",
     "socket.io": "^1.3.7",
     "socket.io-redis": "^0.1.4",
