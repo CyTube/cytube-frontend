@@ -28,6 +28,11 @@ export default class Master {
     constructor(ioConfig, webConfig) {
         this.ioConfig = ioConfig;
         this.webConfig = webConfig;
+        this.workerEnv = {
+            WORKER_MODULE: './lib/socket/worker',
+            IO_CONFIG: JSON.stringify(this.ioConfig.config),
+            WEB_CONFIG: JSON.stringify(this.webConfig.config)
+        };
     }
 
     /**
@@ -45,13 +50,38 @@ export default class Master {
         winston.info(`Spawning ${numProcesses} workers`);
 
         for (let i = 0; i < numProcesses; i++) {
-            workerPool.push(cluster.fork({
-                WORKER_MODULE: './lib/socket/worker',
-                IO_CONFIG: JSON.stringify(this.ioConfig.config)
-            }));
+            this._forkWorker();
         }
 
         this.ioConfig.getListenerConfig().forEach(this._bindListener.bind(this));
+    }
+
+    /**
+     * Spawn a new worker process.
+     *
+     * @private
+     */
+    _forkWorker() {
+        const worker = cluster.fork(this.workerEnv);
+        worker.on('exit', this.onWorkerExit.bind(this, worker));
+        workerPool.push(worker);
+    }
+
+    /**
+     * Callback for when a worker process exits.  Restarts a new worker.
+     *
+     * @param {object} worker Worker that exited.
+     * @param {number} code Return code from the worker.
+     * @private
+     */
+    onWorkerExit(worker, code) {
+        winston.error(`Worker ${worker.id} exited with code ${code}`);
+        const index = workerPool.indexOf(worker);
+        if (index >= 0) {
+            workerPool.splice(index, 1);
+        }
+
+        this._forkWorker();
     }
 
     /**

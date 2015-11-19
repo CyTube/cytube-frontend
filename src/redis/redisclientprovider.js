@@ -26,7 +26,7 @@ export default class RedisClientProvider {
      * <code>redis</code> module.
      */
     get(suppressErrors = false) {
-        const client = redis.createClient(redisConfig);
+        const client = redis.createClient(this.redisConfig);
 
         if (suppressErrors) {
             client.on('error', this._defaultErrorHandler);
