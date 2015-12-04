@@ -3,11 +3,15 @@ import socketio from 'socket.io';
 import Socket from 'socket.io/lib/socket';
 import redisAdapter from 'socket.io-redis';
 import logger from '../logger';
+import uuid from 'uuid';
+import Subscriber from '../redis/subscriber';
 
 export default class IOFrontendNode {
     constructor(redisClientProvider, httpServer) {
         this.redisClientProvider = redisClientProvider;
+        this.id = uuid.v4();
         this.ioServer = null;
+        this.sockets = {};
         this.init(httpServer);
     }
 
@@ -24,6 +28,24 @@ export default class IOFrontendNode {
 
         this.ioServer.on('connection', this.onConnection.bind(this));
         this.ioServer.attach(httpServer);
+
+        this.initMessageSubscriber();
+    }
+
+    initMessageSubscriber() {
+        this.subscriber = new Subscriber(
+                this.redisClientProvider.get(true),
+                this.redisClientProvider.get(true),
+                this.id,
+                this.id
+        );
+
+        this.subscriber.on('message', this.onRedisMessage.bind(this));
+        logger.info(`Subscribed to redis queue ${this.id}`);
+    }
+
+    onRedisMessage(message) {
+        logger.debug(`Received redis message ${JSON.stringify(message)}`);
     }
 
     /**
@@ -34,6 +56,7 @@ export default class IOFrontendNode {
      */
     onConnection(socket) {
         logger.info(`socket.io received connection from ${socket.conn.remoteAddress}`);
+        this.sockets[socket.id] = socket;
         socket.on('proxied-event', this.onSocketEvent.bind(this, socket));
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
     }
@@ -57,6 +80,7 @@ export default class IOFrontendNode {
      * @private
      */
     onSocketDisconnect(socket) {
+        delete this.sockets[socket.id];
     }
 }
 
