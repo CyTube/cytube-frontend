@@ -1,11 +1,10 @@
 var cluster = require('cluster');
-var redisAdapter = require('socket.io-redis');
-var IOConfiguration = require('./lib/configuration/ioconfig')['default'];
+var ClusterConfiguration = require('./lib/configuration/clusterconfig')['default'];
 var WebConfiguration = require('./lib/configuration/webconfig')['default'];
 var RedisClientProvider = require('./lib/redis/redisclientprovider')['default'];
 
 if (cluster.isMaster) {
-    var ioConfig = new IOConfiguration({
+    var clusterConfig = new ClusterConfiguration({
         listeners: [
             {
                 host: '0.0.0.0',
@@ -22,8 +21,8 @@ if (cluster.isMaster) {
         ]
     });
 
-    const Master = require('./lib/socket/master')['default'];
-    new Master(ioConfig, webConfig).initialize();
+    const Master = require('./lib/cluster/master')['default'];
+    new Master(clusterConfig, webConfig).initialize();
 } else {
     var redisConfig = {
         host: 'localhost',
@@ -31,12 +30,6 @@ if (cluster.isMaster) {
         retry_max_delay: 2000
     };
     var redisClientProvider = new RedisClientProvider(redisConfig);
-    var ioConfig = new IOConfiguration(JSON.parse(process.env.IO_CONFIG));
-    var webConfig = new WebConfiguration(JSON.parse(process.env.WEB_CONFIG));
-    var adapter = redisAdapter({
-        pubClient: redisClientProvider.get(true),
-        subClient: redisClientProvider.get(true)
-    });
-    var Worker = require(process.env.WORKER_MODULE)['default'];
-    new Worker(redisClientProvider, adapter, ioConfig, webConfig).initialize();
+    var Worker = require('./lib/cluster/worker')['default'];
+    new Worker(redisClientProvider).initialize();
 }

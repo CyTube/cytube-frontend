@@ -4,35 +4,20 @@ import winston from '../logger';
 import ipUtil from 'ip';
 
 const X_FORWARDED_FOR = /x-forwarded-for: (.*)\r\n/i;
-const listeners = [];
-const workerPool = [];
-
-function stickyHashAddress(address, poolSize) {
-    if (net.isIPv4(address)) {
-        return Number(address.replace(/\./g, '')) % poolSize;
-    } else if (net.isIPv6(address)) {
-        throw new Error(`Cannot stickyHash ${address}: IPv6 is not supported yet`);
-    } else {
-        throw new Error(`Cannot stickyHash "${address}": not an IP address`);
-    }
-}
 
 /** Cluster master */
 export default class Master {
     /**
      * Create a Master object.
      *
-     * @param {IOConfiguration} ioConfig socket.io configuration.
+     * @param {ClusterConfiguration} clusterConfig cluster configuration.
      * @param {WebConfiguration} webConfig webserver configuration.
      */
-    constructor(ioConfig, webConfig) {
-        this.ioConfig = ioConfig;
+    constructor(clusterConfig, webConfig) {
+        this.clusterConfig = clusterConfig;
         this.webConfig = webConfig;
-        this.workerEnv = {
-            WORKER_MODULE: './lib/socket/worker',
-            IO_CONFIG: JSON.stringify(this.ioConfig.config),
-            WEB_CONFIG: JSON.stringify(this.webConfig.config)
-        };
+        this.listeners = [];
+        this.workerPool = [];
     }
 
     /**
@@ -46,14 +31,14 @@ export default class Master {
             throw new Error('Cannot initialize socket cluster from a worker process');
         }
 
-        const numProcesses = this.ioConfig.getProcessCount();
+        const numProcesses = this.clusterConfig.getProcessCount();
         winston.info(`Spawning ${numProcesses} workers`);
 
         for (let i = 0; i < numProcesses; i++) {
             this._forkWorker();
         }
 
-        this.ioConfig.getListenerConfig().forEach(this._bindListener.bind(this));
+        this.clusterConfig.getListenerConfig().forEach(this._bindListener.bind(this));
     }
 
     /**
@@ -62,9 +47,9 @@ export default class Master {
      * @private
      */
     _forkWorker() {
-        const worker = cluster.fork(this.workerEnv);
+        const worker = cluster.fork();
         worker.on('exit', this.onWorkerExit.bind(this, worker));
-        workerPool.push(worker);
+        this.workerPool.push(worker);
     }
 
     /**
@@ -76,9 +61,9 @@ export default class Master {
      */
     onWorkerExit(worker, code) {
         winston.error(`Worker ${worker.id} exited with code ${code}`);
-        const index = workerPool.indexOf(worker);
+        const index = this.workerPool.indexOf(worker);
         if (index >= 0) {
-            workerPool.splice(index, 1);
+            this.workerPool.splice(index, 1);
         }
 
         this._forkWorker();
@@ -104,7 +89,7 @@ export default class Master {
         });
 
         listener.listen(port, host);
-        listeners.push(listener);
+        this.listeners.push(listener);
     }
 
     /**
@@ -119,7 +104,8 @@ export default class Master {
         socket.once('data', buffer => {
             socket.pause();
             const ip = this._ipForSocket(socket, buffer);
-            const destinationWorker = workerPool[this.stickyHash(ip, workerPool.length)];
+            const workerIndex = this.stickyHash(ip, this.workerPool.length);
+            const destinationWorker = this.workerPool[workerIndex];
             destinationWorker.send({
                 type: 'connection',
                 initialData: buffer.toString('base64'),

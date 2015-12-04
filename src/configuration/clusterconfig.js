@@ -1,4 +1,4 @@
-export default class IOConfiguration {
+export default class ClusterConfiguration {
     constructor(config) {
         this.config = config;
     }
