@@ -5,6 +5,7 @@ import redisAdapter from 'socket.io-redis';
 import logger from '../logger';
 import uuid from 'uuid';
 import Subscriber from '../redis/subscriber';
+import LockTimer from '../redis/locktimer';
 
 export default class IOFrontendNode {
     constructor(redisClientProvider, httpServer) {
@@ -30,6 +31,7 @@ export default class IOFrontendNode {
         this.ioServer.attach(httpServer);
 
         this.initMessageSubscriber();
+        this.initHealthCheck();
     }
 
     initMessageSubscriber() {
@@ -42,6 +44,34 @@ export default class IOFrontendNode {
 
         this.subscriber.on('message', this.onRedisMessage.bind(this));
         logger.info(`Subscribed to redis queue ${this.id}`);
+    }
+
+    initHealthCheck() {
+        this.healthTimer = new LockTimer(this.redisClientProvider.get(true),
+                this.id + ':alive',
+                10); // TODO replace with configurable value
+        this.healthTimer.on('soft timeout', this.onSoftTimeout.bind(this));
+        this.healthTimer.on('hard timeout', this.onHardTimeout.bind(this));
+    }
+
+    /**
+     * Handle a soft timeout.  Occurs when the health check key in Redis for
+     * this node expires, which means the backend will assume this frontend
+     * shard is dead.  Attempt to rejoin remaining users on this shard to
+     * their respective channels.
+     */
+    onSoftTimeout() {
+        logger.warn(`${this.id}: soft timeout`);
+    }
+
+    /**
+     * Handle a hard timeout.  Occurs when the health check timer is unable
+     * to write to Redis for 2x the timer interval.  In this case, all users
+     * should be disconnected from this node so that they may reconnect to
+     * a healthy one.
+     */
+    onHardTimeout() {
+        logger.warn(`${this.id}: hard timeout`);
     }
 
     onRedisMessage(message) {
