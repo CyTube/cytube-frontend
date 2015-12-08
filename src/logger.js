@@ -21,7 +21,7 @@ Object.defineProperty(exports, 'default', {
 
 function initializeLogger() {
     INSTANCE = new winston.Logger({
-        level: 'info',
+        level: 'debug',
         transports: [
             new (winston.transports.Console)({
                 colorize: true
