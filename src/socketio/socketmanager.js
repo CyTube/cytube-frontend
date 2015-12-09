@@ -41,8 +41,9 @@ export default class SocketManager extends EventEmitter {
                 this.onJoinChannel.apply(this, data);
                 break;
             default: {
-                if (socket.user.channel !== null) {
-                    socket.user.channel.proxy(socket, event, data);
+                if (socket.channel != null) {
+                    data.unshift(event);
+                    socket.channel.onSocketEvent(socket, data);
                 }
                 break;
             }

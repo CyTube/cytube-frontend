@@ -56,7 +56,8 @@ export default class IOFrontendNode {
 
     initManagers() {
         this.socketManager = new SocketManager();
-        this.channelManager = new ChannelManager();
+        this.channelManager = new ChannelManager(this.id,
+                this.redisClientProvider.get(true));
 
         this.socketManager.on('joinChannel',
                 this.channelManager.onSocketJoinChannel.bind(this.channelManager));
