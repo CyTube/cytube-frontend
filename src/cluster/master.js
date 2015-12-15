@@ -1,6 +1,6 @@
 import cluster from 'cluster';
 import net from 'net';
-import winston from '../logger';
+import logger from 'cytube-common/lib/logger';
 import ipUtil from 'ip';
 
 const X_FORWARDED_FOR = /x-forwarded-for: (.*)\r\n/i;
@@ -27,12 +27,12 @@ export default class Master {
      */
     initialize() {
         if (!cluster.isMaster) {
-            winston.error('Cannot initialize socket cluster from a worker process');
+            logger.error('Cannot initialize socket cluster from a worker process');
             throw new Error('Cannot initialize socket cluster from a worker process');
         }
 
         const numProcesses = this.clusterConfig.getProcessCount();
-        winston.info(`Spawning ${numProcesses} workers`);
+        logger.info(`Spawning ${numProcesses} workers`);
 
         for (let i = 0; i < numProcesses; i++) {
             this._forkWorker();
@@ -60,7 +60,7 @@ export default class Master {
      * @private
      */
     onWorkerExit(worker, code) {
-        winston.error(`Worker ${worker.id} exited with code ${code}`);
+        logger.error(`Worker ${worker.id} exited with code ${code}`);
         const index = this.workerPool.indexOf(worker);
         if (index >= 0) {
             this.workerPool.splice(index, 1);
@@ -81,11 +81,11 @@ export default class Master {
         const listener = net.createServer(this._handleConnection.bind(this));
 
         listener.on('error', err => {
-            winston.error(`Listener on [${host}:${port}] caught error: ${err.stack}`);
+            logger.error(`Listener on [${host}:${port}] caught error: ${err.stack}`);
         });
 
         listener.on('listening', () => {
-            winston.info(`Listening on [${host}:${port}]`);
+            logger.info(`Listening on [${host}:${port}]`);
         });
 
         listener.listen(port, host);

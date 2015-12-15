@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import logger from '../logger';
+import logger from 'cytube-common/lib/logger';
 
 export default class Channel extends EventEmitter {
     constructor(name, publisher, nodeID) {

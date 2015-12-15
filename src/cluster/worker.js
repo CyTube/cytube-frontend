@@ -1,6 +1,6 @@
 import cluster from 'cluster';
 import http from 'http';
-import winston from '../logger';
+import winston from 'cytube-common/lib/logger';
 import IOFrontendNode from '../socketio/iofrontend';
 
 /** Class representing a cluster worker. */

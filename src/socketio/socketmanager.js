@@ -1,6 +1,6 @@
 import Socket from 'socket.io/lib/socket';
 import { EventEmitter } from 'events';
-import logger from '../logger';
+import logger from 'cytube-common/lib/logger';
 
 export default class SocketManager extends EventEmitter {
     constructor() {

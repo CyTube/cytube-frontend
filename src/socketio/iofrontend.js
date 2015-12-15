@@ -1,10 +1,10 @@
 import { EventEmitter } from 'events';
 import socketio from 'socket.io';
 import redisAdapter from 'socket.io-redis';
-import logger from '../logger';
+import logger from 'cytube-common/lib/logger';
 import uuid from 'uuid';
-import Subscriber from '../redis/subscriber';
-import LockTimer from '../redis/locktimer';
+import Subscriber from 'cytube-common/lib/redis/subscriber';
+import LockTimer from 'cytube-common/lib/redis/locktimer';
 import ChannelManager from './channelmanager';
 import SocketManager from './socketmanager';
 

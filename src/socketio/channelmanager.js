@@ -1,6 +1,6 @@
-import Publisher from '../redis/publisher';
+import Publisher from 'cytube-common/lib/redis/publisher';
 import Channel from './channel';
-import logger from '../logger';
+import logger from 'cytube-common/lib/logger';
 
 export default class ChannelManager {
     constructor(nodeID, redisClient) {
