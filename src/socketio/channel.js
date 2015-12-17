@@ -24,6 +24,9 @@ export default class Channel extends EventEmitter {
             {
                 action: 'socketConnect',
                 socketID: socket.id,
+                socketData: {
+                    ip: socket.ip
+                },
                 nodeID: this.nodeID
             },
             {
