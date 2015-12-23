@@ -1,26 +1,47 @@
-import Publisher from 'cytube-common/lib/redis/publisher';
+import Promise from 'bluebird';
 import Channel from './channel';
 import logger from 'cytube-common/lib/logger';
 
 export default class ChannelManager {
-    constructor(nodeID, redisClient) {
+    constructor(nodeID, backendConnectionManager, channelConnectionResolver) {
         this.nodeID = nodeID;
-        this.redisClient = redisClient;
+        this.backendConnectionManager = backendConnectionManager;
+        this.channelConnectionResolver = channelConnectionResolver;
         this.channels = {};
     }
 
     onSocketJoinChannel(socket, name) {
-        let channel = this.channels[name];
-        if (!channel) {
-            logger.info(`Creating local channel ${name}`);
-            channel = this.channels[name] = new Channel(name,
-                    new Publisher(this.redisClient, name + ':q', name + ':c', 20),
-                    this.nodeID);
-            channel.on('empty', this.onChannelEmpty.bind(this, channel));
+        this.findOrCreateChannel(name).then(channel => {
+            socket.channel = channel;
+            channel.onSocketJoin(socket);
+        });
+    }
+
+    findOrCreateChannel(name) {
+        const channel = this.channels[name];
+        if (channel) {
+            return Promise.resolve(channel);
         }
 
-        socket.channel = channel;
-        channel.onSocketJoin(socket);
+        return this.createNewChannel(name);
+    }
+
+    createNewChannel(name) {
+        logger.info(`Creating local channel ${name}`);
+        return this.channelConnectionResolver.resolve(name).then(address => {
+            if (this.channels[name]) {
+                logger.error(`createNewChannel: already created channel ${name}`);
+                return this.channels[name];
+            }
+
+            logger.info(`Resolved channel ${name} to backend address [${address}]`);
+            const connection = this.backendConnectionManager.connect(address);
+            const channel = this.channels[name] = new Channel(name,
+                    connection, this.nodeID);
+
+            channel.on('empty', this.onChannelEmpty.bind(this, channel));
+            return channel;
+        });
     }
 
     onChannelEmpty(channel) {
@@ -30,7 +51,7 @@ export default class ChannelManager {
             return;
         }
 
-        logger.info(`Removing channel ${channel.name}`);
+        logger.info(`Deleting channel ${channel.name}`);
         delete this.channels[channel.name];
     }
 }

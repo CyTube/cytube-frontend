@@ -5,6 +5,8 @@ import logger from 'cytube-common/lib/logger';
 import uuid from 'uuid';
 import Subscriber from 'cytube-common/lib/redis/subscriber';
 import LockTimer from 'cytube-common/lib/redis/locktimer';
+import ChannelConnectionResolver from './redis/channelconnectionresolver';
+import ConnectionManager from 'cytube-common/lib/tcpjson/connectionmanager';
 import ChannelManager from './channelmanager';
 import SocketManager from './socketmanager';
 
@@ -55,10 +57,12 @@ export default class IOFrontendNode {
     }
 
     initManagers() {
+        this.backendConnectionManager = new ConnectionManager();
         this.socketManager = new SocketManager();
         this.channelManager = new ChannelManager(this.id,
-                this.redisClientProvider.get(true));
-
+                this.backendConnectionManager,
+                new ChannelConnectionResolver(
+                        this.redisClientProvider.get(true)));
         this.socketManager.on('joinChannel',
                 this.channelManager.onSocketJoinChannel.bind(this.channelManager));
     }

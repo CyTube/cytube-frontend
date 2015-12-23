@@ -2,10 +2,10 @@ import { EventEmitter } from 'events';
 import logger from 'cytube-common/lib/logger';
 
 export default class Channel extends EventEmitter {
-    constructor(name, publisher, nodeID) {
+    constructor(name, backendConnection, nodeID) {
         super();
         this.name = name;
-        this.publisher = publisher;
+        this.backendConnection = backendConnection;
         this.nodeID = nodeID;
         this.sockets = [];
     }
@@ -20,24 +20,22 @@ export default class Channel extends EventEmitter {
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
 
         this.sockets.push(socket);
-        this.publisher.publishBatch([
-            {
-                action: 'socketConnect',
-                socketID: socket.id,
-                socketData: {
-                    ip: socket.ip
-                },
-                nodeID: this.nodeID
+        this.backendConnection.write({
+            action: 'socketConnect',
+            socketID: socket.id,
+            socketData: {
+                ip: socket.ip
             },
-            {
-                action: 'socketFrame',
-                socketID: socket.id,
-                args: [
-                    'joinChannel',
-                    { name: this.name }
-                ]
-            }
-        ]);
+            nodeID: this.nodeID
+        });
+        this.backendConnection.write({
+            action: 'socketFrame',
+            socketID: socket.id,
+            args: [
+                'joinChannel',
+                { name: this.name }
+            ]
+        });
     }
 
     onSocketDisconnect(socket) {
@@ -46,7 +44,7 @@ export default class Channel extends EventEmitter {
             this.sockets.splice(index, 1);
         }
 
-        this.publisher.publish({
+        this.backendConnection.write({
             action: 'socketDisconnect',
             socketID: socket.id
         });
