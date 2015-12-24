@@ -37,13 +37,11 @@ export default class SocketManager extends EventEmitter {
         logger.debug(`socket:${socket.id} received ${event}`);
         switch (event) {
             case 'joinChannel':
-                data.unshift(socket);
-                this.onJoinChannel.apply(this, data);
+                this.onJoinChannel.apply(this, [socket].concat(data));
                 break;
             default: {
                 if (socket.channel != null) {
-                    data.unshift(event);
-                    socket.channel.onSocketEvent(socket, data);
+                    socket.channel.onSocketEvent(socket, event, data);
                 }
                 break;
             }

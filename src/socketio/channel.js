@@ -20,22 +20,14 @@ export default class Channel extends EventEmitter {
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
 
         this.sockets.push(socket);
-        this.backendConnection.write({
-            action: 'socketConnect',
-            socketID: socket.id,
-            socketData: {
-                ip: socket.ip
-            },
-            nodeID: this.nodeID
-        });
-        this.backendConnection.write({
-            action: 'socketFrame',
-            socketID: socket.id,
-            args: [
-                'joinChannel',
-                { name: this.name }
-            ]
-        });
+        this.backendConnection.write(
+                this.backendConnection.protocol.socketConnect(socket.id, socket.ip)
+        );
+        this.backendConnection.write(
+                this.backendConnection.protocol.socketFrame(socket.id, 'joinChannel', [{
+                    name: this.name
+                }])
+        );
     }
 
     onSocketDisconnect(socket) {
@@ -44,21 +36,18 @@ export default class Channel extends EventEmitter {
             this.sockets.splice(index, 1);
         }
 
-        this.backendConnection.write({
-            action: 'socketDisconnect',
-            socketID: socket.id
-        });
+        this.backendConnection.write(
+                this.backendConnection.protocol.socketDisconnect(socket.id)
+        );
 
         if (this.sockets.length === 0) {
             this.emit('empty');
         }
     }
 
-    onSocketEvent(socket, args) {
-        this.publisher.publish({
-            action: 'socketFrame',
-            socketID: socket.id,
-            args: args
-        });
+    onSocketEvent(socket, event, args) {
+        this.backendConnection.write(
+                this.backendConnection.protocol.socketFrame(socket.id, event, args)
+        );
     }
 }
