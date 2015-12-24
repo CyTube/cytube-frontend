@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "babel --watch --source-maps --out-dir lib/ src/",
+    "dev": "babel -D --watch --source-maps --out-dir lib/ src/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Calvin Montgomery",
