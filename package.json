@@ -17,7 +17,7 @@
     "cytube-common": "file:///home/calvin/Documents/Programming/cytube-common",
     "ip": "^1.0.2",
     "socket.io": "^1.3.7",
-    "socket.io-redis": "^0.1.4",
+    "socket.io-redis": "^1.0.0",
     "uuid": "^2.0.1"
   },
   "babel": {

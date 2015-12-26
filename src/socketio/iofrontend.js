@@ -3,8 +3,6 @@ import socketio from 'socket.io';
 import redisAdapter from 'socket.io-redis';
 import logger from 'cytube-common/lib/logger';
 import uuid from 'uuid';
-import Subscriber from 'cytube-common/lib/redis/subscriber';
-import LockTimer from 'cytube-common/lib/redis/locktimer';
 import ChannelConnectionResolver from './redis/channelconnectionresolver';
 import ConnectionManager from 'cytube-common/lib/tcpjson/connectionmanager';
 import ChannelManager from './channelmanager';
@@ -23,72 +21,32 @@ export default class IOFrontendNode {
         this.ioServer = socketio();
 
         const adapter = redisAdapter({
-            pubClient: this.redisClientProvider.get(true),
-            subClient: this.redisClientProvider.get(true)
+            pubClient: this.redisClientProvider.get(),
+            // socket.io-redis won't function properly unless the received
+            // message is returned as a Buffer
+            subClient: this.redisClientProvider.get({ return_buffers: true })
         });
         this.ioServer.adapter(adapter);
 
         this.ioServer.on('connection', this.onConnection.bind(this));
         this.ioServer.attach(httpServer);
 
-        this.initMessageSubscriber();
-        this.initHealthCheck();
         this.initManagers();
-    }
-
-    initMessageSubscriber() {
-        this.subscriber = new Subscriber(
-                this.redisClientProvider.get(true),
-                this.redisClientProvider.get(true),
-                this.id,
-                this.id
-        );
-
-        this.subscriber.on('message', this.onRedisMessage.bind(this));
-        logger.info(`Subscribed to redis queue ${this.id}`);
-    }
-
-    initHealthCheck() {
-        this.healthTimer = new LockTimer(this.redisClientProvider.get(true),
-                this.id + ':alive',
-                10); // TODO replace with configurable value
-        this.healthTimer.on('soft timeout', this.onSoftTimeout.bind(this));
-        this.healthTimer.on('hard timeout', this.onHardTimeout.bind(this));
     }
 
     initManagers() {
         this.backendConnectionManager = new ConnectionManager();
         this.socketManager = new SocketManager();
-        this.channelManager = new ChannelManager(this.id,
+        const backendResolver = new ChannelConnectionResolver(
+                this.redisClientProvider.get()
+        );
+        this.channelManager = new ChannelManager(
                 this.backendConnectionManager,
-                new ChannelConnectionResolver(
-                        this.redisClientProvider.get(true)));
+                backendResolver
+        );
         this.socketManager.on('joinChannel',
-                this.channelManager.onSocketJoinChannel.bind(this.channelManager));
-    }
-
-    /**
-     * Handle a soft timeout.  Occurs when the health check key in Redis for
-     * this node expires, which means the backend will assume this frontend
-     * shard is dead.  Attempt to rejoin remaining users on this shard to
-     * their respective channels.
-     */
-    onSoftTimeout() {
-        logger.warn(`${this.id}: soft timeout`);
-    }
-
-    /**
-     * Handle a hard timeout.  Occurs when the health check timer is unable
-     * to write to Redis for 2x the timer interval.  In this case, all users
-     * should be disconnected from this node so that they may reconnect to
-     * a healthy one.
-     */
-    onHardTimeout() {
-        logger.warn(`${this.id}: hard timeout`);
-    }
-
-    onRedisMessage(message) {
-        logger.debug(`Received redis message ${JSON.stringify(message)}`);
+                this.channelManager.onSocketJoinChannel.bind(this.channelManager)
+        );
     }
 
     /**

@@ -3,8 +3,7 @@ import Channel from './channel';
 import logger from 'cytube-common/lib/logger';
 
 export default class ChannelManager {
-    constructor(nodeID, backendConnectionManager, channelConnectionResolver) {
-        this.nodeID = nodeID;
+    constructor(backendConnectionManager, channelConnectionResolver) {
         this.backendConnectionManager = backendConnectionManager;
         this.channelConnectionResolver = channelConnectionResolver;
         this.channels = {};
@@ -37,7 +36,7 @@ export default class ChannelManager {
             logger.info(`Resolved channel ${name} to backend address [${address}]`);
             const connection = this.backendConnectionManager.connect(address);
             const channel = this.channels[name] = new Channel(name,
-                    connection, this.nodeID);
+                    connection);
 
             channel.on('empty', this.onChannelEmpty.bind(this, channel));
             return channel;

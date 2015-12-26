@@ -2,11 +2,10 @@ import { EventEmitter } from 'events';
 import logger from 'cytube-common/lib/logger';
 
 export default class Channel extends EventEmitter {
-    constructor(name, backendConnection, nodeID) {
+    constructor(name, backendConnection) {
         super();
         this.name = name;
         this.backendConnection = backendConnection;
-        this.nodeID = nodeID;
         this.sockets = [];
     }
 

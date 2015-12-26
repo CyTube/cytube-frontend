@@ -1,7 +1,7 @@
 var cluster = require('cluster');
 var ClusterConfiguration = require('./lib/configuration/clusterconfig')['default'];
 var WebConfiguration = require('./lib/configuration/webconfig')['default'];
-var RedisClientProvider = require('./lib/redis/redisclientprovider')['default'];
+var RedisClientProvider = require('cytube-common/lib/redis/redisclientprovider')['default'];
 
 if (cluster.isMaster) {
     var clusterConfig = new ClusterConfiguration({
