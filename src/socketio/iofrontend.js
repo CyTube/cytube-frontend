@@ -36,6 +36,7 @@ export default class IOFrontendNode {
 
     initManagers() {
         this.backendConnectionManager = new ConnectionManager();
+        this.backendConnectionManager.on('connection', this.onBackendConnection.bind(this));
         this.socketManager = new SocketManager();
         const backendResolver = new ChannelConnectionResolver(
                 this.redisClientProvider.get()
@@ -47,6 +48,19 @@ export default class IOFrontendNode {
         this.socketManager.on('joinChannel',
                 this.channelManager.onSocketJoinChannel.bind(this.channelManager)
         );
+    }
+
+    onBackendConnection(connection) {
+        connection.on('data', this.onBackendData.bind(this, connection))
+    }
+
+    onBackendData(connection, data) {
+        logger.debug(`onBackendData: ${JSON.stringify(data)}`);
+        switch (data.$type) {
+            case 'socketJoinSocketChannel':
+                this.socketManager.onSocketJoinRooms(data.socketID, data.channels);
+                break;
+        }
     }
 
     /**

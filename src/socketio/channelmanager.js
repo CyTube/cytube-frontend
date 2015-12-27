@@ -7,6 +7,7 @@ export default class ChannelManager {
         this.backendConnectionManager = backendConnectionManager;
         this.channelConnectionResolver = channelConnectionResolver;
         this.channels = {};
+        this.connectionChannelMap = {};
     }
 
     onSocketJoinChannel(socket, name) {
@@ -35,12 +36,35 @@ export default class ChannelManager {
 
             logger.info(`Resolved channel ${name} to backend address [${address}]`);
             const connection = this.backendConnectionManager.connect(address);
-            const channel = this.channels[name] = new Channel(name,
-                    connection);
-
+            const channel = this.channels[name] = new Channel(
+                    name,
+                    connection
+            );
             channel.on('empty', this.onChannelEmpty.bind(this, channel));
+
+            if (this.connectionChannelMap.hasOwnProperty(address)) {
+                this.connectionChannelMap[address].push(channel);
+            } else {
+                this.connectionChannelMap[address] = [channel];
+                this.bindBackendDisconnectEvents(connection);
+            }
             return channel;
         });
+    }
+
+    bindBackendDisconnectEvents(connection) {
+        connection.on('close', this.onBackendDisconnect.bind(this, connection));
+    }
+
+    onBackendDisconnect(connection) {
+        const endpoint = connection.endpoint;
+        if (this.connectionChannelMap.hasOwnProperty(endpoint)) {
+            const channelList = this.connectionChannelMap[endpoint];
+            const names = channelList.map(channel => channel.name).sort();
+            logger.warn(`Backend connection to [${endpoint}] was closed.  ` +
+                    `Disconnecting channels [${names}]`);
+            channelList.forEach(channel => channel.onBackendDisconnect());
+        }
     }
 
     onChannelEmpty(channel) {
@@ -50,7 +74,23 @@ export default class ChannelManager {
             return;
         }
 
-        logger.info(`Deleting channel ${channel.name}`);
+        logger.info(`Closing channel ${channel.name}`);
         delete this.channels[channel.name];
+
+        const connection = channel.backendConnection;
+
+        if (this.connectionChannelMap.hasOwnProperty(connection.endpoint)) {
+            const channelList = this.connectionChannelMap[connection.endpoint];
+            const index = channelList.indexOf(channel);
+            if (index >= 0) {
+                channelList.splice(index, 1);
+            }
+
+            if (channelList.length === 0) {
+                logger.info(`Closing connection [${connection.endpoint}]` +
+                        ' (no more channels left on this backend)');
+                this.backendConnectionManager.disconnect(connection);
+            }
+        }
     }
 }

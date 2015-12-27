@@ -67,6 +67,15 @@ export default class SocketManager extends EventEmitter {
         // TODO: Check for blacklisted channel
         this.emit('joinChannel', socket, name);
     }
+
+    onSocketJoinRooms(socketID, rooms) {
+        if (!this.sockets.hasOwnProperty(socketID)) {
+            logger.warn(`onSocketJoinRooms: socket [${socketID}] does not exist`);
+            return;
+        }
+        const socket = this.sockets[socketID];
+        rooms.forEach(room => socket.join(room));
+    }
 }
 
 /**

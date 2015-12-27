@@ -49,4 +49,11 @@ export default class Channel extends EventEmitter {
                 this.backendConnection.protocol.socketFrame(socket.id, event, args)
         );
     }
+
+    onBackendDisconnect() {
+        this.sockets.forEach(socket => {
+            // TODO: emit error frame
+            socket.disconnect();
+        });
+    }
 }
