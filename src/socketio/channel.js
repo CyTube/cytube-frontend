@@ -20,10 +20,10 @@ export default class Channel extends EventEmitter {
 
         this.sockets.push(socket);
         this.backendConnection.write(
-                this.backendConnection.protocol.socketConnect(socket.id, socket.ip)
+                this.backendConnection.protocol.newSocketConnectEvent(socket.id, socket.ip)
         );
         this.backendConnection.write(
-                this.backendConnection.protocol.socketFrame(socket.id, 'joinChannel', [{
+                this.backendConnection.protocol.newSocketFrameEvent(socket.id, 'joinChannel', [{
                     name: this.name
                 }])
         );
@@ -36,7 +36,7 @@ export default class Channel extends EventEmitter {
         }
 
         this.backendConnection.write(
-                this.backendConnection.protocol.socketDisconnect(socket.id)
+                this.backendConnection.protocol.newSocketDisconnectEvent(socket.id)
         );
 
         if (this.sockets.length === 0) {
@@ -46,7 +46,7 @@ export default class Channel extends EventEmitter {
 
     onSocketEvent(socket, event, args) {
         this.backendConnection.write(
-                this.backendConnection.protocol.socketFrame(socket.id, event, args)
+                this.backendConnection.protocol.newSocketFrameEvent(socket.id, event, args)
         );
     }
 

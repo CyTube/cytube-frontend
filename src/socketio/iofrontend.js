@@ -4,7 +4,7 @@ import redisAdapter from 'socket.io-redis';
 import logger from 'cytube-common/lib/logger';
 import uuid from 'uuid';
 import ChannelConnectionResolver from './redis/channelconnectionresolver';
-import ConnectionManager from 'cytube-common/lib/tcpjson/connectionmanager';
+import ConnectionManager from 'cytube-common/lib/proxy/connectionmanager';
 import ChannelManager from './channelmanager';
 import SocketManager from './socketmanager';
 
@@ -51,16 +51,11 @@ export default class IOFrontendNode {
     }
 
     onBackendConnection(connection) {
-        connection.on('data', this.onBackendData.bind(this, connection))
+        connection.on('SocketJoinRoomsEvent', this.onSocketJoinRooms.bind(this));
     }
 
-    onBackendData(connection, data) {
-        logger.debug(`onBackendData: ${JSON.stringify(data)}`);
-        switch (data.$type) {
-            case 'socketJoinSocketChannel':
-                this.socketManager.onSocketJoinRooms(data.socketID, data.channels);
-                break;
-        }
+    onSocketJoinRooms(socketID, roomList) {
+        this.socketManager.onSocketJoinRooms(socketID, roomList);
     }
 
     /**
