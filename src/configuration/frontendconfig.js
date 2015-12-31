@@ -22,4 +22,8 @@ export default class FrontendConfiguration {
     getRedisConfig() {
         return this.config.redis;
     }
+
+    getCookieSecret() {
+        return this.config.web.cookieSecret;
+    }
 }

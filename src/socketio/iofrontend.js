@@ -7,10 +7,13 @@ import ChannelConnectionResolver from './redis/channelconnectionresolver';
 import ConnectionManager from 'cytube-common/lib/proxy/connectionmanager';
 import ChannelManager from './channelmanager';
 import SocketManager from './socketmanager';
+import cookieParser from 'cookie-parser';
 
 export default class IOFrontendNode {
-    constructor(redisClientProvider, httpServer) {
+    constructor(redisClientProvider, frontendConfig, httpServer, database) {
         this.redisClientProvider = redisClientProvider;
+        this.frontendConfig = frontendConfig;
+        this.database = database;
         this.id = uuid.v4();
         this.ioServer = null;
         this.init(httpServer);
@@ -28,6 +31,8 @@ export default class IOFrontendNode {
         });
         this.ioServer.adapter(adapter);
 
+        this.cookieParser = cookieParser(this.frontendConfig.getCookieSecret());
+        this.ioServer.use(this.authorizeSocket.bind(this));
         this.ioServer.on('connection', this.onConnection.bind(this));
         this.ioServer.attach(httpServer);
 
@@ -56,6 +61,34 @@ export default class IOFrontendNode {
 
     onSocketJoinRooms(socketID, roomList) {
         this.socketManager.onSocketJoinRooms(socketID, roomList);
+    }
+
+    authorizeSocket(socket, cb) {
+        const req = socket.request;
+        socket.user = null;
+
+        if (req.headers.cookie) {
+            this.cookieParser(req, null, () => {
+                const sessionCookie = req.signedCookies.auth;
+                if (!sessionCookie) {
+                    return cb(null, true);
+                }
+
+                const User = this.database.models.User;
+                User.verifySession(sessionCookie).then(user => {
+                    socket.user = {
+                        name: user.get('name'),
+                        globalRank: user.get('global_rank')
+                    };
+
+                    logger.debug(`Authorized user for ${socket.conn.remoteAddress}`,
+                            socket.user);
+                    return cb(null, true);
+                })
+            });
+        } else {
+            return cb(null, true);
+        }
     }
 
     /**

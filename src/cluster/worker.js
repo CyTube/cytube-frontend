@@ -1,8 +1,9 @@
 import cluster from 'cluster';
 import http from 'http';
-import winston from 'cytube-common/lib/logger';
+import logger from 'cytube-common/lib/logger';
 import RedisClientProvider from 'cytube-common/lib/redis/redisclientprovider';
 import IOFrontendNode from '../socketio/iofrontend';
+import Database from 'cytube-common/lib/database/database';
 
 /** Class representing a cluster worker. */
 export default class Worker {
@@ -11,20 +12,23 @@ export default class Worker {
      */
     constructor(frontendConfig) {
         this.frontendConfig = frontendConfig;
-        this.redisClientProvider = new RedisClientProvider(
-                frontendConfig.getRedisConfig()
-        );
     }
 
     /**
      * Initialize the worker process.  Set up HTTP/Socket.IO instances.
      */
     initialize() {
-        winston.info('Initializing worker process');
+        logger.info('Initializing worker process');
 
+        this.redisClientProvider = new RedisClientProvider(
+                this.frontendConfig.getRedisConfig()
+        );
+        this.database = new Database(this.frontendConfig.getKnexConfig());
         this.httpServer = http.createServer();
         this.ioFrontend = new IOFrontendNode(this.redisClientProvider,
-                this.httpServer);
+                this.frontendConfig,
+                this.httpServer,
+                this.database);
         process.on('message', this.onProcessMessage.bind(this));
     }
 
@@ -40,7 +44,7 @@ export default class Worker {
             return;
         }
 
-        winston.debug(`Received connection from ${message.realIP}`);
+        logger.debug(`Received connection from ${message.realIP}`);
 
         // The master process had to read the HTTP headers in order to
         // hash the X-Forwarded-For IP address.  Unshift this data back into
