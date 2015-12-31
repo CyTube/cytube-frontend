@@ -10,11 +10,6 @@ export default class SocketManager extends EventEmitter {
     }
 
     onConnection(socket) {
-        socket.user = {
-            ip: socket.ip,
-            channel: null
-        };
-
         this.sockets[socket.id] = socket;
         socket.on('proxied-event', this.onSocketEvent.bind(this, socket));
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
@@ -53,8 +48,9 @@ export default class SocketManager extends EventEmitter {
     }
 
     onJoinChannel(socket, data) {
-        if (socket.user.channel !== null) {
+        if (socket.channel) {
             // TODO: In the future, emit an error to the client
+            logger.warn(`onJoinChannel: ${socket.id} is already in a channel`);
             return;
         }
 
