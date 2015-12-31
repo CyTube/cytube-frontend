@@ -20,7 +20,11 @@ export default class Channel extends EventEmitter {
 
         this.sockets.push(socket);
         this.backendConnection.write(
-                this.backendConnection.protocol.newSocketConnectEvent(socket.id, socket.ip)
+                this.backendConnection.protocol.newSocketConnectEvent(
+                        socket.id,
+                        socket.ip,
+                        socket.user
+                )
         );
         this.backendConnection.write(
                 this.backendConnection.protocol.newSocketFrameEvent(socket.id, 'joinChannel', [{
