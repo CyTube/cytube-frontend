@@ -10,12 +10,10 @@ export default class Master {
     /**
      * Create a Master object.
      *
-     * @param {ClusterConfiguration} clusterConfig cluster configuration.
-     * @param {WebConfiguration} webConfig webserver configuration.
+     * @param {FrontendConfiguration} frontendConfig frontend configuration.
      */
-    constructor(clusterConfig, webConfig) {
-        this.clusterConfig = clusterConfig;
-        this.webConfig = webConfig;
+    constructor(frontendConfig) {
+        this.frontendConfig = frontendConfig;
         this.listeners = [];
         this.workerPool = [];
     }
@@ -31,14 +29,14 @@ export default class Master {
             throw new Error('Cannot initialize socket cluster from a worker process');
         }
 
-        const numProcesses = this.clusterConfig.getProcessCount();
+        const numProcesses = this.frontendConfig.getProcessCount();
         logger.info(`Spawning ${numProcesses} workers`);
 
         for (let i = 0; i < numProcesses; i++) {
             this._forkWorker();
         }
 
-        this.clusterConfig.getListenerConfig().forEach(this._bindListener.bind(this));
+        this.frontendConfig.getListenerConfig().forEach(this._bindListener.bind(this));
     }
 
     /**
@@ -125,7 +123,7 @@ export default class Master {
      */
     _ipForSocket(socket, buffer) {
         const directIP = socket.remoteAddress;
-        if (!this.webConfig.isTrustedProxy(directIP)) {
+        if (!this.frontendConfig.isTrustedProxy(directIP)) {
             return directIP;
         }
 

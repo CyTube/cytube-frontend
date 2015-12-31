@@ -1,6 +1,7 @@
 import cluster from 'cluster';
 import http from 'http';
 import winston from 'cytube-common/lib/logger';
+import RedisClientProvider from 'cytube-common/lib/redis/redisclientprovider';
 import IOFrontendNode from '../socketio/iofrontend';
 
 /** Class representing a cluster worker. */
@@ -8,8 +9,11 @@ export default class Worker {
     /**
      * Create a new Worker.
      */
-    constructor(redisClientProvider) {
-        this.redisClientProvider = redisClientProvider;
+    constructor(frontendConfig) {
+        this.frontendConfig = frontendConfig;
+        this.redisClientProvider = new RedisClientProvider(
+                frontendConfig.getRedisConfig()
+        );
     }
 
     /**
