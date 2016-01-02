@@ -65,9 +65,11 @@ export default class ChannelManager {
             try {
                 const channelList = this.connectionChannelMap[endpoint];
                 const names = channelList.map(channel => channel.name).sort();
-                logger.warn(`Backend connection to [${endpoint}] was closed.  ` +
-                        `Disconnecting channels [${names}]`);
-                channelList.forEach(channel => channel.onBackendDisconnect());
+                if (channelList.length > 0) {
+                    logger.warn(`Backend connection to [${endpoint}] was closed.  ` +
+                            `Disconnecting channels [${names}]`);
+                    channelList.forEach(channel => channel.onBackendDisconnect());
+                }
             } finally {
                 delete this.connectionChannelMap[endpoint];
             }
