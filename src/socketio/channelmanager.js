@@ -14,6 +14,9 @@ export default class ChannelManager {
         this.findOrCreateChannel(name).then(channel => {
             socket.channel = channel;
             channel.onSocketJoin(socket);
+        }).catch(error => {
+            logger.error(`ChannelManager::onSocketJoinChannel(${socket.id}, ${name}): ` +
+                    `Unable to resolve channel: ${error}`);
         });
     }
 
@@ -59,11 +62,15 @@ export default class ChannelManager {
     onBackendDisconnect(connection) {
         const endpoint = connection.endpoint;
         if (this.connectionChannelMap.hasOwnProperty(endpoint)) {
-            const channelList = this.connectionChannelMap[endpoint];
-            const names = channelList.map(channel => channel.name).sort();
-            logger.warn(`Backend connection to [${endpoint}] was closed.  ` +
-                    `Disconnecting channels [${names}]`);
-            channelList.forEach(channel => channel.onBackendDisconnect());
+            try {
+                const channelList = this.connectionChannelMap[endpoint];
+                const names = channelList.map(channel => channel.name).sort();
+                logger.warn(`Backend connection to [${endpoint}] was closed.  ` +
+                        `Disconnecting channels [${names}]`);
+                channelList.forEach(channel => channel.onBackendDisconnect());
+            } finally {
+                delete this.connectionChannelMap[endpoint];
+            }
         }
     }
 
@@ -87,9 +94,14 @@ export default class ChannelManager {
             }
 
             if (channelList.length === 0) {
-                logger.info(`Closing connection [${connection.endpoint}]` +
+                const endpoint = connection.endpoint;
+                logger.info(`Closing connection [${endpoint}]` +
                         ' (no more channels left on this backend)');
-                this.backendConnectionManager.disconnect(connection);
+                try {
+                    this.backendConnectionManager.disconnect(connection);
+                } finally {
+                    delete this.connectionChannelMap[endpoint];
+                }
             }
         }
     }

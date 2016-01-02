@@ -16,15 +16,21 @@ export default class ChannelConnectionResolver {
                 channel,
                 this.hash(channel),
                 Date.now() - 10000
-        );
+        ).then(result => {
+            if (result === null) {
+                throw new Error(`No available backend for ${channel}`);
+            }
+
+            return result;
+        });
     }
 
     hash(str) {
-        let hash = 1;
+        let h = 1;
         for (let i = 0; i < str.length; i++) {
-            hash += 31 * str.charCodeAt(i);
+            h += 31 * str.charCodeAt(i);
         }
 
-        return hash;
+        return h;
     }
 }
