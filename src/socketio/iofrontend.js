@@ -81,10 +81,11 @@ export default class IOFrontendNode {
                         globalRank: user.get('global_rank')
                     };
 
-                    logger.debug(`Authorized user for ${socket.conn.remoteAddress}`,
-                            socket.user);
+                    logger.info(`Authenticated ${socket.conn.remoteAddress} as ${user.get('name')}`);
                     return cb(null, true);
-                })
+                }).catch(error => {
+                    return cb(null, true);
+                });
             });
         } else {
             return cb(null, true);
