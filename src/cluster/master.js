@@ -4,6 +4,10 @@ import logger from 'cytube-common/lib/logger';
 import ipUtil from 'ip';
 
 const X_FORWARDED_FOR = /x-forwarded-for: (.*)\r\n/i;
+// Arbitrarily chosen exit code not already used by node.js.
+// Returned when a fatal error occurs that should terminate
+// the entire process and not just respawn the worker.
+const WORKER_FATAL = 55;
 
 /** Cluster master */
 export default class Master {
@@ -59,6 +63,11 @@ export default class Master {
      */
     onWorkerExit(worker, code) {
         logger.error(`Worker ${worker.id} exited with code ${code}`);
+        if (code === WORKER_FATAL) {
+            logger.error(`Worker ${worker.id} reported a fatal error, exiting.`);
+            process.exit(1);
+        }
+
         const index = this.workerPool.indexOf(worker);
         if (index >= 0) {
             this.workerPool.splice(index, 1);
@@ -76,7 +85,8 @@ export default class Master {
      */
     _bindListener(listenerConfig) {
         const { host, port } = listenerConfig;
-        const listener = net.createServer(this._handleConnection.bind(this));
+        const listener = net.createServer(this._handleConnection.bind(this,
+                Boolean(listenerConfig.tls)));
 
         listener.on('error', err => {
             logger.error(`Listener on [${host}:${port}] caught error: ${err.stack}`);
@@ -98,7 +108,7 @@ export default class Master {
      * @param {Socket} socket The incoming socket.
      * @private
      */
-    _handleConnection(socket) {
+    _handleConnection(isTLSConnection, socket) {
         socket.once('data', buffer => {
             socket.pause();
             const ip = this._ipForSocket(socket, buffer);
@@ -107,7 +117,8 @@ export default class Master {
             destinationWorker.send({
                 type: 'connection',
                 initialData: buffer.toString('base64'),
-                realIP: ip
+                realIP: ip,
+                tlsConnection: isTLSConnection
             }, socket);
         });
     }

@@ -26,4 +26,8 @@ export default class FrontendConfiguration {
     getCookieSecret() {
         return this.config.web.cookieSecret;
     }
+
+    getTLSConfig() {
+        return this.config.web.tls;
+    }
 }

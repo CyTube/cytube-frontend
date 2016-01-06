@@ -10,16 +10,17 @@ import SocketManager from './socketmanager';
 import cookieParser from 'cookie-parser';
 
 export default class IOFrontendNode {
-    constructor(redisClientProvider, frontendConfig, httpServer, database) {
+    constructor(redisClientProvider, frontendConfig, httpServer, httpsServer,
+            database) {
         this.redisClientProvider = redisClientProvider;
         this.frontendConfig = frontendConfig;
         this.database = database;
         this.id = uuid.v4();
         this.ioServer = null;
-        this.init(httpServer);
+        this.init(httpServer, httpsServer);
     }
 
-    init(httpServer) {
+    init(httpServer, httpsServer) {
         logger.info('Initializing socket.io server');
         this.ioServer = socketio();
 
@@ -35,6 +36,7 @@ export default class IOFrontendNode {
         this.ioServer.use(this.authorizeSocket.bind(this));
         this.ioServer.on('connection', this.onConnection.bind(this));
         this.ioServer.attach(httpServer);
+        this.ioServer.attach(httpsServer);
 
         this.initManagers();
     }

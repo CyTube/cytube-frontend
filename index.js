@@ -3,6 +3,7 @@ const ConfigLoader = require('cytube-common/lib/configuration/configloader');
 const FrontendConfiguration = require('./lib/configuration/frontendconfig')['default'];
 const logger = require('cytube-common/lib/logger')['default'];
 const path = require('path');
+require('source-map-support').install();
 
 var frontendConfig;
 try {
