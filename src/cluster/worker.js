@@ -32,13 +32,24 @@ export default class Worker {
         );
         this.database = new Database(this.frontendConfig.getKnexConfig());
         this.httpServer = http.createServer();
-        this.httpsServer = https.createServer(this.getTLSOptions());
+        this.initHttpsIfNeeded();
         this.ioFrontend = new IOFrontendNode(this.redisClientProvider,
                 this.frontendConfig,
                 this.httpServer,
                 this.httpsServer,
                 this.database);
         process.on('message', this.onProcessMessage.bind(this));
+    }
+
+    initHttpsIfNeeded() {
+        const hasTLSListener = this.frontendConfig.getListenerConfig().filter(
+                listener => listener.tls
+        ).length > 0;
+        if (hasTLSListener) {
+            this.httpsServer = https.createServer(this.getTLSOptions());
+        } else {
+            this.httpsServer = null;
+        }
     }
 
     getTLSOptions() {
@@ -103,6 +114,15 @@ export default class Worker {
         socket.unshift(initialData);
 
         if (message.tlsConnection) {
+            if (this.httpsServer === null) {
+                logger.error(`Unexpected TLS connection received, rejecting.`);
+                try {
+                    socket.close();
+                } catch (error) {
+                    logger.error(`Error closing socket: ${error}`);
+                }
+                return;
+            }
             this.httpsServer.emit('connection', socket);
         } else {
             this.httpServer.emit('connection', socket);

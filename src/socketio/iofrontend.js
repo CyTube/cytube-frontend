@@ -37,7 +37,9 @@ export default class IOFrontendNode {
         this.ioServer.use(this.authorizeSocket.bind(this));
         this.ioServer.on('connection', this.onConnection.bind(this));
         this.ioServer.attach(httpServer);
-        this.ioServer.attach(httpsServer);
+        if (httpsServer !== null) {
+            this.ioServer.attach(httpsServer);
+        }
 
         this.initManagers();
     }
