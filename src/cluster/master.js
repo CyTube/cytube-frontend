@@ -1,6 +1,7 @@
 import cluster from 'cluster';
 import net from 'net';
 import logger from 'cytube-common/lib/logger';
+import { resolveIP } from 'cytube-common/lib/util/x-forwarded-for';
 import ipUtil from 'ip';
 
 const X_FORWARDED_FOR = /x-forwarded-for: (.*)\r\n/i;
@@ -133,24 +134,14 @@ export default class Master {
      * @private
      */
     _ipForSocket(socket, buffer) {
-        const directIP = socket.remoteAddress;
-        if (!this.frontendConfig.isTrustedProxy(directIP)) {
-            return directIP;
-        }
-
+        const realIP = socket.remoteAddress;
         const data = buffer.toString('utf8');
         const match = X_FORWARDED_FOR.exec(data);
         if (!match) {
-            return directIP;
+            return realIP;
         }
 
-        const ipList = match[1].split(',').map(ip => ip.trim())
-                .filter(ip => net.isIP(ip));
-        if (ipList.length > 0) {
-            return ipList[0];
-        } else {
-            return directIP;
-        }
+        return resolveIP(this.frontendConfig, realIP, match[1]);
     }
 
     /**

@@ -8,6 +8,7 @@ import ConnectionManager from 'cytube-common/lib/proxy/connectionmanager';
 import ChannelManager from './channelmanager';
 import SocketManager from './socketmanager';
 import cookieParser from 'cookie-parser';
+import { resolveIP } from 'cytube-common/lib/util/x-forwarded-for';
 
 export default class IOFrontendNode {
     constructor(redisClientProvider, frontendConfig, httpServer, httpsServer,
@@ -68,6 +69,8 @@ export default class IOFrontendNode {
     authorizeSocket(socket, cb) {
         const req = socket.request;
         socket.user = null;
+        socket.ip = resolveIP(this.frontendConfig, socket.conn.remoteAddress,
+                req.headers['x-forwarded-for']);
 
         if (req.headers.cookie) {
             this.cookieParser(req, null, () => {
@@ -101,8 +104,7 @@ export default class IOFrontendNode {
      * @private
      */
     onConnection(socket) {
-        logger.info(`socket.io received connection from ${socket.conn.remoteAddress}`);
-        socket.ip = socket.conn.remoteAddress;
+        logger.info(`socket.io received connection from ${socket.ip}`);
         this.socketManager.onConnection(socket);
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
     }
