@@ -31,6 +31,13 @@ export default class Channel extends EventEmitter {
                     name: this.name
                 }])
         );
+        let event;
+        while ((event = socket.bufferedFrames.shift()) !== undefined) {
+            logger.debug(`bufferedFrames: write ${event.name}`);
+            this.backendConnection.write(
+                this.backendConnection.protocol.newSocketFrameEvent(socket.id, event.name, event.args)
+            );
+        }
     }
 
     onSocketDisconnect(socket) {

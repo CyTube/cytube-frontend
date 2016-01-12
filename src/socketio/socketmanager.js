@@ -11,6 +11,7 @@ export default class SocketManager extends EventEmitter {
 
     onConnection(socket) {
         this.sockets[socket.id] = socket;
+        socket.bufferedFrames = [];
         socket.on('proxied-event', this.onSocketEvent.bind(this, socket));
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
         socket.on('error', this.onSocketError.bind(this, socket));
@@ -37,6 +38,11 @@ export default class SocketManager extends EventEmitter {
             default: {
                 if (socket.channel != null) {
                     socket.channel.onSocketEvent(socket, event, data);
+                } else {
+                    socket.bufferedFrames.push({
+                        name: event,
+                        args: data
+                    });
                 }
                 break;
             }

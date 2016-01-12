@@ -8,6 +8,7 @@ export default class ChannelManager {
         this.channelConnectionResolver = channelConnectionResolver;
         this.channels = {};
         this.connectionChannelMap = {};
+        this.pendingChannels = {};
     }
 
     onSocketJoinChannel(socket, name) {
@@ -24,6 +25,8 @@ export default class ChannelManager {
         const channel = this.channels[name];
         if (channel) {
             return Promise.resolve(channel);
+        } else if (this.pendingChannels.hasOwnProperty(name)) {
+            return this.pendingChannels[name];
         }
 
         return this.createNewChannel(name);
@@ -31,7 +34,8 @@ export default class ChannelManager {
 
     createNewChannel(name) {
         logger.info(`Creating local channel ${name}`);
-        return this.channelConnectionResolver.resolve(name).then(address => {
+        this.pendingChannels[name] = this.channelConnectionResolver
+                .resolve(name).then(address => {
             if (this.channels[name]) {
                 logger.error(`createNewChannel: already created channel ${name}`);
                 return this.channels[name];
@@ -51,8 +55,11 @@ export default class ChannelManager {
                 this.connectionChannelMap[address] = [channel];
                 this.bindBackendDisconnectEvents(connection);
             }
+            delete this.pendingChannels[name];
             return channel;
         });
+
+        return this.pendingChannels[name];
     }
 
     bindBackendDisconnectEvents(connection) {
@@ -71,6 +78,7 @@ export default class ChannelManager {
                     channelList.forEach(channel => channel.onBackendDisconnect());
                 }
             } finally {
+                logger.debug(`Deleting endpoint ${endpoint}`);
                 delete this.connectionChannelMap[endpoint];
             }
         }
