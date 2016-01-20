@@ -14,7 +14,9 @@ export default class ChannelManager {
     onSocketJoinChannel(socket, name) {
         this.findOrCreateChannel(name).then(channel => {
             socket.channel = channel;
-            channel.onSocketJoin(socket);
+            process.nextTick(() => {
+                channel.onSocketJoin(socket);
+            });
         }).catch(error => {
             logger.error(`ChannelManager::onSocketJoinChannel(${socket.id}, ${name}): ` +
                     `Unable to resolve channel: ${error}`);

@@ -9,6 +9,7 @@ import ChannelManager from './channelmanager';
 import SocketManager from './socketmanager';
 import cookieParser from 'cookie-parser';
 import { resolveIP } from 'cytube-common/lib/util/x-forwarded-for';
+import JSONProtocol from 'cytube-common/lib/proxy/protocol';
 
 export default class IOFrontendNode {
     constructor(redisClientProvider, frontendConfig, httpServer, httpsServer,
@@ -45,7 +46,7 @@ export default class IOFrontendNode {
     }
 
     initManagers() {
-        this.backendConnectionManager = new ConnectionManager();
+        this.backendConnectionManager = new ConnectionManager(new JSONProtocol());
         this.backendConnectionManager.on('connection', this.onBackendConnection.bind(this));
         this.socketManager = new SocketManager();
         const backendResolver = new ChannelConnectionResolver(
