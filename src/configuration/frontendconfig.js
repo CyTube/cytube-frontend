@@ -1,6 +1,8 @@
+import { formatWebsocketAddress } from 'cytube-common/lib/util/addressutil';
+
 export default class FrontendConfiguration {
     constructor(config) {
-        this.config = config;
+        this.config = this.preprocess(config);
     }
 
     isTrustedProxy(ip) {
@@ -29,5 +31,19 @@ export default class FrontendConfiguration {
 
     getTLSConfig() {
         return this.config.web.tls;
+    }
+
+    preprocess(config) {
+        config.web.listeners.forEach(listener => {
+            if (!listener.clientAddress) {
+                listener.clientAddress = formatWebsocketAddress(
+                        listener.host,
+                        listener.port,
+                        listener.tls
+                );
+            }
+        });
+
+        return config;
     }
 }

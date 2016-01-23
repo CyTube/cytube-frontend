@@ -3,7 +3,11 @@ import net from 'net';
 import logger from 'cytube-common/lib/logger';
 import { resolveIP } from 'cytube-common/lib/util/x-forwarded-for';
 import ipUtil from 'ip';
+import PoolEntryUpdater from 'cytube-common/lib/redis/poolentryupdater';
+import uuid from 'uuid';
+import RedisClientProvider from 'cytube-common/lib/redis/redisclientprovider';
 
+const FRONTEND_POOL = 'frontend-hosts';
 const X_FORWARDED_FOR = /x-forwarded-for: (.*)\r\n/i;
 // Arbitrarily chosen exit code not already used by node.js.
 // Returned when a fatal error occurs that should terminate
@@ -21,6 +25,7 @@ export default class Master {
         this.frontendConfig = frontendConfig;
         this.listeners = [];
         this.workerPool = [];
+        this.frontendPoolUpdaters = [];
     }
 
     /**
@@ -40,6 +45,11 @@ export default class Master {
         for (let i = 0; i < numProcesses; i++) {
             this._forkWorker();
         }
+
+        const redisClientProvider = new RedisClientProvider(
+                this.frontendConfig.getRedisConfig()
+        );
+        this.frontendPoolRedisClient = redisClientProvider.get();
 
         this.frontendConfig.getListenerConfig().forEach(this._bindListener.bind(this));
     }
@@ -95,6 +105,7 @@ export default class Master {
 
         listener.on('listening', () => {
             logger.info(`Listening on [${host}:${port}]`);
+            this.registerFrontendPool(listenerConfig);
         });
 
         listener.listen(port, host);
@@ -122,6 +133,28 @@ export default class Master {
                 tlsConnection: isTLSConnection
             }, socket);
         });
+    }
+
+    /**
+     * Register a listener in the frontend pool in Redis by creating
+     * a PoolEntryUpdater for this listener's clientAddress.
+     *
+     * @param {object} listenerConfig listener to publish to the pool
+     */
+    registerFrontendPool(listenerConfig) {
+        const entry = {
+            address: listenerConfig.clientAddress
+        };
+
+        const updater = new PoolEntryUpdater(
+                this.frontendPoolRedisClient,
+                FRONTEND_POOL,
+                uuid.v4(),
+                entry
+        );
+
+        updater.start();
+        this.frontendPoolUpdaters.push(updater);
     }
 
     /**
