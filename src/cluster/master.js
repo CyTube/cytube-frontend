@@ -6,8 +6,10 @@ import ipUtil from 'ip';
 import PoolEntryUpdater from 'cytube-common/lib/redis/poolentryupdater';
 import uuid from 'uuid';
 import RedisClientProvider from 'cytube-common/lib/redis/redisclientprovider';
+import { PROTOCOL_WS_SECURE } from 'cytube-common/lib/util/addressutil';
 
 const FRONTEND_POOL = 'frontend-hosts';
+const FRONTEND_POOL_SECURE = 'frontend-hosts-secure';
 const X_FORWARDED_FOR = /x-forwarded-for: (.*)\r\n/i;
 // Arbitrarily chosen exit code not already used by node.js.
 // Returned when a fatal error occurs that should terminate
@@ -145,10 +147,13 @@ export default class Master {
         const entry = {
             address: listenerConfig.clientAddress
         };
+        const pool = listenerConfig.clientAddress.indexOf(PROTOCOL_WS_SECURE) === 0
+                ? FRONTEND_POOL_SECURE
+                : FRONTEND_POOL;
 
         const updater = new PoolEntryUpdater(
                 this.frontendPoolRedisClient,
-                FRONTEND_POOL,
+                pool,
                 uuid.v4(),
                 entry
         );

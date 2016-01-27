@@ -1,8 +1,8 @@
-import LuaLoader from 'cytube-common/lib/redis/lualoader';
+import { runLuaScript } from 'cytube-common/lib/redis/lualoader';
 import path from 'path';
 import Promise from 'bluebird';
 
-const RESOLVE_CHANNEL = LuaLoader(path.resolve(__dirname, 'resolve_channel.lua'))
+const RESOLVE_CHANNEL = path.resolve(__dirname, 'resolve_channel.lua');
 
 export default class ChannelConnectionResolver {
     constructor(redisClient) {
@@ -10,13 +10,12 @@ export default class ChannelConnectionResolver {
     }
 
     resolve(channel) {
-        // TODO: Use EVALSHA for efficiency
-        return this.redisClient.evalAsync(RESOLVE_CHANNEL,
-                0,
-                channel,
-                this.hash(channel),
-                Date.now() - 10000
-        ).then(result => {
+        return runLuaScript(this.redisClient, RESOLVE_CHANNEL, [
+            0,
+            channel,
+            this.hash(channel),
+            Date.now() - 10000
+        ]).then(result => {
             if (result === null) {
                 throw new Error(`No available backend for ${channel}`);
             }
