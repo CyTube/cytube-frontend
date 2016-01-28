@@ -3,13 +3,10 @@ import net from 'net';
 import logger from 'cytube-common/lib/logger';
 import { resolveIP } from 'cytube-common/lib/util/x-forwarded-for';
 import ipUtil from 'ip';
-import PoolEntryUpdater from 'cytube-common/lib/redis/poolentryupdater';
 import uuid from 'uuid';
 import RedisClientProvider from 'cytube-common/lib/redis/redisclientprovider';
-import { isSecure } from 'cytube-common/lib/util/addressutil';
+import { FrontendPool } from 'cytube-common/lib/redis/frontendpool';
 
-const FRONTEND_POOL = 'frontend-hosts';
-const FRONTEND_POOL_SECURE = 'frontend-hosts-secure';
 const X_FORWARDED_FOR = /x-forwarded-for: (.*)\r\n/i;
 // Arbitrarily chosen exit code not already used by node.js.
 // Returned when a fatal error occurs that should terminate
@@ -51,7 +48,8 @@ export default class Master {
         const redisClientProvider = new RedisClientProvider(
                 this.frontendConfig.getRedisConfig()
         );
-        this.frontendPoolRedisClient = redisClientProvider.get();
+
+        this.frontendPool = new FrontendPool(redisClientProvider.get());
 
         this.frontendConfig.getListenerConfig().forEach(this._bindListener.bind(this));
     }
@@ -144,20 +142,10 @@ export default class Master {
      * @param {object} listenerConfig listener to publish to the pool
      */
     registerFrontendPool(listenerConfig) {
-        const secure = isSecure(listenerConfig.clientAddress);
-        const entry = {
-            url: listenerConfig.clientAddress,
-            secure
-        };
-        const pool = secure ? FRONTEND_POOL_SECURE : FRONTEND_POOL;
-
-        const updater = new PoolEntryUpdater(
-                this.frontendPoolRedisClient,
-                pool,
-                uuid.v4(),
-                entry
+        const updater = this.frontendPool.getPoolEntryUpdater(
+                listenerConfig.clientAddress,
+                uuid.v4()
         );
-
         updater.start();
         this.frontendPoolUpdaters.push(updater);
     }
