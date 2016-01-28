@@ -6,7 +6,7 @@ import ipUtil from 'ip';
 import PoolEntryUpdater from 'cytube-common/lib/redis/poolentryupdater';
 import uuid from 'uuid';
 import RedisClientProvider from 'cytube-common/lib/redis/redisclientprovider';
-import { PROTOCOL_WS_SECURE } from 'cytube-common/lib/util/addressutil';
+import { isSecure } from 'cytube-common/lib/util/addressutil';
 
 const FRONTEND_POOL = 'frontend-hosts';
 const FRONTEND_POOL_SECURE = 'frontend-hosts-secure';
@@ -144,12 +144,12 @@ export default class Master {
      * @param {object} listenerConfig listener to publish to the pool
      */
     registerFrontendPool(listenerConfig) {
+        const secure = isSecure(listenerConfig.clientAddress);
         const entry = {
-            address: listenerConfig.clientAddress
+            url: listenerConfig.clientAddress,
+            secure
         };
-        const pool = listenerConfig.clientAddress.indexOf(PROTOCOL_WS_SECURE) === 0
-                ? FRONTEND_POOL_SECURE
-                : FRONTEND_POOL;
+        const pool = secure ? FRONTEND_POOL_SECURE : FRONTEND_POOL;
 
         const updater = new PoolEntryUpdater(
                 this.frontendPoolRedisClient,

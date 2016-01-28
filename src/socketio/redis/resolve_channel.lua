@@ -23,7 +23,7 @@ for i = 1, #allBackends, 2 do
     local decoded = cjson.decode(entry)
     local address = decoded['address']
     local timestamp = decoded['lastUpdated']
-    if timestamp < expiration then
+    if timestamp >= expiration then
         -- This backend has not updated its entry recently.
         -- Assume it is dead and remove it from the pool.
         redis.call('hdel', 'backend-addresses', uuid)
