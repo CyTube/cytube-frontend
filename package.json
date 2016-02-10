@@ -1,5 +1,5 @@
 {
-  "name": "cytube-socket-proxy",
+  "name": "cytube-frontend",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
@@ -18,6 +18,7 @@
     "babel-preset-es2015": "^6.1.4",
     "bluebird": "^3.0.5",
     "cookie-parser": "^1.4.0",
+    "cytube-common": "github:cytube/cytube-common",
     "ip": "^1.0.2",
     "socket.io": "^1.3.7",
     "socket.io-redis": "^1.0.0",
