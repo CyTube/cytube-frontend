@@ -89,7 +89,7 @@ export default class IOFrontendNode {
                         globalRank: user.get('global_rank')
                     };
 
-                    logger.info(`Authenticated ${socket.conn.remoteAddress} as ${user.get('name')}`);
+                    logger.info(`Authenticated ${socket.ip} as ${user.get('name')}`);
                     return cb(null, true);
                 }).catch(error => {
                     return cb(null, true);
