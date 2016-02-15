@@ -59,6 +59,9 @@ export default class ChannelManager {
             }
             delete this.pendingChannels[name];
             return channel;
+        }).catch(error => {
+            delete this.pendingChannels[name];
+            throw error;
         });
 
         return this.pendingChannels[name];

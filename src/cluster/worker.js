@@ -106,6 +106,11 @@ export default class Worker {
 
         logger.debug(`Received connection from ${message.realIP}`);
 
+        if (!socket) {
+            logger.warn(`Received null socket from master (IP: ${message.realIP})`);
+            return;
+        }
+
         // The master process had to read the HTTP headers in order to
         // hash the X-Forwarded-For IP address.  Unshift this data back into
         // the socket queue so that the HTTP/Socket.IO server can still

@@ -12,7 +12,7 @@ end
 -- Channel is not loaded yet, fetch all available backends and pick one
 local allBackends = redis.call('hgetall', 'backend-hosts')
 if #allBackends == 0 then
-    return nil
+    return false
 end
 
 local addresses = {}
@@ -26,11 +26,15 @@ for i = 1, #allBackends, 2 do
     if timestamp < expiration then
         -- This backend has not updated its entry recently.
         -- Assume it is dead and remove it from the pool.
-        redis.call('hdel', 'backend-addresses', uuid)
+        redis.call('hdel', 'backend-hosts', uuid)
     else
         addresses[#addresses + 1] = address
     end
 end
 
-local index = (tonumber(ARGV[2]) % #addresses) + 1
-return addresses[index]
+if #addresses == 0 then
+    return false
+else
+    local index = (tonumber(ARGV[2]) % #addresses) + 1
+    return addresses[index]
+end
