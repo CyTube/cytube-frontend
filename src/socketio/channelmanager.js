@@ -20,6 +20,8 @@ export default class ChannelManager {
         }).catch(error => {
             logger.error(`ChannelManager::onSocketJoinChannel(${socket.id}, ${name}): ` +
                     `Unable to resolve channel: ${error}`);
+        }).finally(() => {
+            delete socket.pending.channel;
         });
     }
 

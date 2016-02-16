@@ -12,6 +12,7 @@ export default class SocketManager extends EventEmitter {
     onConnection(socket) {
         this.sockets[socket.id] = socket;
         socket.bufferedFrames = [];
+        socket.pending = {};
         socket.on('proxied-event', this.onSocketEvent.bind(this, socket));
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
         socket.on('error', this.onSocketError.bind(this, socket));
@@ -58,6 +59,8 @@ export default class SocketManager extends EventEmitter {
             // TODO: In the future, emit an error to the client
             logger.warn(`onJoinChannel: ${socket.id} is already in a channel`);
             return;
+        } else if (socket.pending.channel) {
+            return;
         }
 
         const name = data.name;
@@ -66,6 +69,7 @@ export default class SocketManager extends EventEmitter {
             return;
         }
 
+        socket.pending.channel = data.name;
         // TODO: Check for blacklisted channel
         this.emit('joinChannel', socket, name);
     }

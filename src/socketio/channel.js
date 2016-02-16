@@ -11,8 +11,8 @@ export default class Channel extends EventEmitter {
 
     onSocketJoin(socket) {
         if (this.sockets.indexOf(socket) >= 0) {
-            logger.error(`socket:${socket.id} attempted to join ` +
-                    `channel:${this.name} twice`);
+            logger.warn(`Channel::onSocketJoin called twice for socket: ${socket.id}` +
+                    `(channel: ${this.name})`);
             return;
         }
 
