@@ -33,6 +33,10 @@ export default class FrontendConfiguration {
         return this.config.web.tls;
     }
 
+    getMetricsReportInterval() {
+        return this.config.metrics.reportInterval;
+    }
+
     preprocess(config) {
         config.web.listeners.forEach(listener => {
             if (!listener.clientAddress) {
@@ -43,6 +47,14 @@ export default class FrontendConfiguration {
                 );
             }
         });
+
+        if (!config.metrics) {
+            config.metrics = {};
+        }
+
+        if (isNaN(config.metrics.reportInterval)) {
+            config.metrics.reportInterval = 60 * 1000;
+        }
 
         return config;
     }

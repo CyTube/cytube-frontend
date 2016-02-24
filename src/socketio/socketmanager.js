@@ -1,6 +1,14 @@
 import Socket from 'socket.io/lib/socket';
 import { EventEmitter } from 'events';
 import logger from 'cytube-common/lib/logger';
+import * as Metrics from 'cytube-common/lib/metrics/metrics';
+
+const COUNTER_ACCEPTED_SOCKET = 'socket.io:accept';
+const COUNTER_DISCONNECTED_SOCKET = 'socket.io:disconnect';
+const COUNTER_INCOMING_EVENT = 'socket.io:event:in';
+const COUNTER_BUFFERED_EVENT = 'socket.io:event:buffered';
+const COUNTER_SOCKET_ALREADY_IN_CHANNEL = 'socket.io:joinChannel:alreadyInChannel';
+const COUNTER_SOCKET_JOIN_CHANNEL = 'socket.io:joinChannel:joined';
 
 export default class SocketManager extends EventEmitter {
     constructor() {
@@ -10,6 +18,7 @@ export default class SocketManager extends EventEmitter {
     }
 
     onConnection(socket) {
+        Metrics.incCounter(COUNTER_ACCEPTED_SOCKET);
         this.sockets[socket.id] = socket;
         socket.bufferedFrames = [];
         socket.pending = {};
@@ -31,6 +40,7 @@ export default class SocketManager extends EventEmitter {
      * @private
      */
     onSocketEvent(socket, event, ...data) {
+        Metrics.incCounter(COUNTER_INCOMING_EVENT);
         logger.debug(`socket:${socket.id} received ${event}`);
         switch (event) {
             case 'joinChannel':
@@ -40,6 +50,7 @@ export default class SocketManager extends EventEmitter {
                 if (socket.channel != null) {
                     socket.channel.onSocketEvent(socket, event, data);
                 } else {
+                    Metrics.incCounter(COUNTER_BUFFERED_EVENT);
                     socket.bufferedFrames.push({
                         name: event,
                         args: data
@@ -51,11 +62,13 @@ export default class SocketManager extends EventEmitter {
     }
 
     onSocketDisconnect(socket) {
+        Metrics.incCounter(COUNTER_DISCONNECTED_SOCKET);
         delete this.sockets[socket.id];
     }
 
     onJoinChannel(socket, data) {
         if (socket.channel) {
+            Metrics.incCounter(COUNTER_SOCKET_ALREADY_IN_CHANNEL);
             // TODO: In the future, emit an error to the client
             logger.warn(`onJoinChannel: ${socket.id} is already in a channel`);
             return;
@@ -69,6 +82,7 @@ export default class SocketManager extends EventEmitter {
             return;
         }
 
+        Metrics.incCounter(COUNTER_SOCKET_JOIN_CHANNEL);
         socket.pending.channel = data.name;
         // TODO: Check for blacklisted channel
         this.emit('joinChannel', socket, name);

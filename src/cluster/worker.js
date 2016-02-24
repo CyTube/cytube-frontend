@@ -6,11 +6,17 @@ import logger from 'cytube-common/lib/logger';
 import RedisClientProvider from 'cytube-common/lib/redis/redisclientprovider';
 import IOFrontendNode from '../socketio/iofrontend';
 import Database from 'cytube-common/lib/database/database';
+import * as Metrics from 'cytube-common/lib/metrics/metrics';
+import { JSONFileMetricsReporter } from 'cytube-common/lib/metrics/jsonfilemetricsreporter';
+import path from 'path';
 
 // Arbitrarily chosen exit code not already used by node.js.
 // Returned when a fatal error occurs that should terminate
 // the entire process and not just respawn the worker.
 const WORKER_FATAL = 55;
+const METRICS_FILENAME = path.join(__dirname, '..', '..', 'metrics.log');
+const COUNTER_RECEIVE_SOCKET = 'cytube-frontend:worker:receiveSocket';
+const COUNTER_RECEIVE_NULL_SOCKET = 'cytube-frontend:worker:receiveSocket:null';
 
 /** Class representing a cluster worker. */
 export default class Worker {
@@ -26,6 +32,7 @@ export default class Worker {
      */
     initialize() {
         logger.info('Initializing worker process');
+        this.initMetrics();
 
         this.redisClientProvider = new RedisClientProvider(
                 this.frontendConfig.getRedisConfig()
@@ -39,6 +46,12 @@ export default class Worker {
                 this.httpsServer,
                 this.database);
         process.on('message', this.onProcessMessage.bind(this));
+    }
+
+    initMetrics() {
+        const reporter = new JSONFileMetricsReporter(METRICS_FILENAME);
+        Metrics.setReporter(reporter);
+        Metrics.setReportInterval(this.frontendConfig.getMetricsReportInterval());
     }
 
     initHttpsIfNeeded() {
@@ -107,10 +120,12 @@ export default class Worker {
         logger.debug(`Received connection from ${message.realIP}`);
 
         if (!socket) {
+            Metrics.incCounter(COUNTER_RECEIVE_NULL_SOCKET);
             logger.warn(`Received null socket from master (IP: ${message.realIP})`);
             return;
         }
 
+        Metrics.incCounter(COUNTER_RECEIVE_SOCKET);
         // The master process had to read the HTTP headers in order to
         // hash the X-Forwarded-For IP address.  Unshift this data back into
         // the socket queue so that the HTTP/Socket.IO server can still

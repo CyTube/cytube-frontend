@@ -63,6 +63,8 @@ export default class Channel extends EventEmitter {
 
     onBackendDisconnect() {
         this.sockets.forEach(socket => {
+            // Prevent write-after-end on the channel backend connection
+            socket.channel = null;
             // TODO: emit error frame
             socket.disconnect();
         });
