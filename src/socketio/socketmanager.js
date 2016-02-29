@@ -9,6 +9,7 @@ const COUNTER_INCOMING_EVENT = 'socket.io:event:in';
 const COUNTER_BUFFERED_EVENT = 'socket.io:event:buffered';
 const COUNTER_SOCKET_ALREADY_IN_CHANNEL = 'socket.io:joinChannel:alreadyInChannel';
 const COUNTER_SOCKET_JOIN_CHANNEL = 'socket.io:joinChannel:joined';
+const COUNTER_SOCKET_PACKET = 'socket.io:packet';
 
 export default class SocketManager extends EventEmitter {
     constructor() {
@@ -101,6 +102,7 @@ export default class SocketManager extends EventEmitter {
 /**
  * Patch Socket.IO's Socket prototype to emit a special
  * <code>'proxied-event'</code> event on every incoming event.
+ * Also patches Socket.packet() to emit a metric.
  */
 function patchSocketIOEventProxy() {
     if (Socket.prototype.oneventPatched) {
@@ -108,6 +110,7 @@ function patchSocketIOEventProxy() {
     }
 
     const onevent = Socket.prototype.onevent;
+    const oldPacket = Socket.prototype.packet;
     const emit = EventEmitter.prototype.emit;
 
     Socket.prototype.onevent = function onEvent(packet) {
@@ -115,6 +118,11 @@ function patchSocketIOEventProxy() {
         args.unshift('proxied-event');
         emit.apply(this, args);
         onevent.apply(this, arguments);
+    };
+
+    Socket.prototype.packet = function packet() {
+        oldPacket.apply(this, arguments);
+        Metrics.incCounter(COUNTER_SOCKET_PACKET);
     };
 
     Socket.prototype.oneventPatched = true;

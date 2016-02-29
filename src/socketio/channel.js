@@ -16,6 +16,7 @@ export default class Channel extends EventEmitter {
             return;
         }
 
+        logger.info(`${socket.ip} joined channel ${this.name}`);
         socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
 
         this.sockets.push(socket);
