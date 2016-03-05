@@ -24,7 +24,9 @@ export default class IOFrontendNode {
 
     init(httpServer, httpsServer) {
         logger.info('Initializing socket.io server');
-        this.ioServer = socketio();
+        this.ioServer = socketio({
+            perMessageDeflate: false
+        });
 
         const adapter = redisAdapter({
             pubClient: this.redisClientProvider.get(),
