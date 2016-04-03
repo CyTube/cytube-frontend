@@ -65,10 +65,15 @@ export default class IOFrontendNode {
 
     onBackendConnection(connection) {
         connection.on('SocketJoinRoomsEvent', this.onSocketJoinRooms.bind(this));
+        connection.on('SocketLeaveRoomsEvent', this.onSocketLeaveRooms.bind(this));
     }
 
     onSocketJoinRooms(socketID, roomList) {
         this.socketManager.onSocketJoinRooms(socketID, roomList);
+    }
+
+    onSocketLeaveRooms(socketID, roomList) {
+        this.socketManager.onSocketLeaveRooms(socketID, roomList);
     }
 
     authorizeSocket(socket, cb) {

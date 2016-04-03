@@ -17,6 +17,7 @@ const WORKER_FATAL = 55;
 const METRICS_FILENAME = path.join(__dirname, '..', '..', 'metrics.log');
 const COUNTER_RECEIVE_SOCKET = 'cytube-frontend:worker:receiveSocket';
 const COUNTER_RECEIVE_NULL_SOCKET = 'cytube-frontend:worker:receiveSocket:null';
+const COUNTER_CLIENT_ERROR = 'cytube-frontend:listener:clientError';
 
 /** Class representing a cluster worker. */
 export default class Worker {
@@ -39,6 +40,7 @@ export default class Worker {
         );
         this.database = new Database(this.frontendConfig.getKnexConfig());
         this.httpServer = http.createServer();
+        this.httpServer.on('clientError', this.onClientError);
         this.initHttpsIfNeeded();
         this.ioFrontend = new IOFrontendNode(this.redisClientProvider,
                 this.frontendConfig,
@@ -60,6 +62,7 @@ export default class Worker {
         ).length > 0;
         if (hasTLSListener) {
             this.httpsServer = https.createServer(this.getTLSOptions());
+            this.httpsServer.on('clientError', this.onClientError);
         } else {
             this.httpsServer = null;
         }
@@ -148,5 +151,10 @@ export default class Worker {
             this.httpServer.emit('connection', socket);
         }
         socket.resume();
+    }
+
+    onClientError(error, socket) {
+        Metrics.incCounter(COUNTER_CLIENT_ERROR);
+        logger.debug(`clientError from ${socket.remoteAddress}: ${error}`);
     }
 }
