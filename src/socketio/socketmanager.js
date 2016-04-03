@@ -97,6 +97,16 @@ export default class SocketManager extends EventEmitter {
         const socket = this.sockets[socketID];
         rooms.forEach(room => socket.join(room));
     }
+
+    onSocketLeaveRooms(socketID, rooms) {
+        logger.debug(`onSocketLeaveRooms ${socketID} ${rooms}`);
+        if (!this.sockets.hasOwnProperty(socketID)) {
+            logger.warn(`onSocketLeaveRooms: socket [${socketID}] does not exist`);
+            return;
+        }
+        const socket = this.sockets[socketID];
+        rooms.forEach(room => socket.leave(room));
+    }
 }
 
 /**
