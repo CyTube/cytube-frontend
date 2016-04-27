@@ -10,6 +10,9 @@ import SocketManager from './socketmanager';
 import cookieParser from 'cookie-parser';
 import { resolveIP } from 'cytube-common/lib/util/x-forwarded-for';
 import JSONProtocol from 'cytube-common/lib/proxy/protocol';
+import * as Metrics from 'cytube-common/lib/metrics/metrics';
+
+const COUNTER_NUM_SOCKETS = 'socket.io:count';
 
 export default class IOFrontendNode {
     constructor(redisClientProvider, frontendConfig, httpServer, httpsServer,
@@ -43,6 +46,7 @@ export default class IOFrontendNode {
         }
 
         this.initManagers();
+        this.initMetricsHooks();
     }
 
     initManagers() {
@@ -59,6 +63,21 @@ export default class IOFrontendNode {
         this.socketManager.on('joinChannel',
                 this.channelManager.onSocketJoinChannel.bind(this.channelManager)
         );
+    }
+
+    initMetricsHooks() {
+        Metrics.addReportHook((reporter) => {
+            reporter.addProperty(COUNTER_NUM_SOCKETS, this.getSocketCount());
+        });
+    }
+
+    getSocketCount() {
+        const sockets = this.ioServer.sockets.sockets;
+        if (typeof sockets.length === 'number') {
+            return sockets.length;
+        } else {
+            return Object.keys(sockets).length;
+        }
     }
 
     onBackendConnection(connection) {
