@@ -33,6 +33,8 @@ export default class Master {
      * @throws {Error} Cannot initialize socket cluster from a worker process.
      */
     initialize() {
+        logger.initialize(null, null, !!process.env.DEBUG_LOGGING);
+
         if (!cluster.isMaster) {
             logger.error('Cannot initialize socket cluster from a worker process');
             throw new Error('Cannot initialize socket cluster from a worker process');

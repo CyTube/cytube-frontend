@@ -32,6 +32,7 @@ export default class Worker {
      * Initialize the worker process.  Set up HTTP/Socket.IO instances.
      */
     initialize() {
+        logger.initialize(null, null, !!process.env.DEBUG_LOGGING);
         logger.info('Initializing worker process');
         this.initMetrics();
 
