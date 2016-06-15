@@ -32,6 +32,7 @@ export default class Worker {
      * Initialize the worker process.  Set up HTTP/Socket.IO instances.
      */
     initialize() {
+        this.initErrorHandlers();
         logger.initialize(null, null, !!process.env.DEBUG_LOGGING);
         logger.info('Initializing worker process');
         this.initMetrics();
@@ -41,7 +42,8 @@ export default class Worker {
         );
         this.database = new Database(this.frontendConfig.getKnexConfig());
         this.httpServer = http.createServer();
-        this.httpServer.on('clientError', this.onClientError);
+        this.httpServer.on('error', this.onHttpError.bind(this));
+        this.httpServer.on('clientError', this.onClientError.bind(this));
         this.initHttpsIfNeeded();
         this.ioFrontend = new IOFrontendNode(this.redisClientProvider,
                 this.frontendConfig,
@@ -49,6 +51,11 @@ export default class Worker {
                 this.httpsServer,
                 this.database);
         process.on('message', this.onProcessMessage.bind(this));
+    }
+
+    initErrorHandlers() {
+        process.on('uncaughtException', this.onUncaughtException.bind(this));
+        process.on('unhandledRejection', this.onUnhandledRejection.bind(this));
     }
 
     initMetrics() {
@@ -63,6 +70,7 @@ export default class Worker {
         ).length > 0;
         if (hasTLSListener) {
             this.httpsServer = https.createServer(this.getTLSOptions());
+            this.httpsServer.on('error', this.onHttpError.bind(this));
             this.httpsServer.on('clientError', this.onClientError);
         } else {
             this.httpsServer = null;
@@ -157,5 +165,18 @@ export default class Worker {
     onClientError(error, socket) {
         Metrics.incCounter(COUNTER_CLIENT_ERROR);
         logger.debug(`clientError from ${socket.remoteAddress}: ${error}`);
+    }
+
+    onHttpError(error) {
+        logger.error(`Error from HTTP server: ${error.stack}`);
+    }
+
+    onUncaughtException(error) {
+        logger.error(`Uncaught exception: ${error.stack}`);
+        process.exit(1);
+    }
+
+    onUnhandledRejection(reason, promise) {
+        logger.error(`Unhandled rejection for ${promise}: ${reason}`);
     }
 }

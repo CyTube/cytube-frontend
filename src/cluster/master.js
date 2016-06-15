@@ -135,6 +135,10 @@ export default class Master {
                 tlsConnection: isTLSConnection
             }, socket);
         });
+
+        socket.on('error', error => {
+            logger.warn(`Client error: ${error}`);
+        });
     }
 
     /**
